@@ -40,19 +40,33 @@ const UploadPDF = ({ onDataProcessed, setLoading }) => {
           headers: {
             "Content-Type": "multipart/form-data",
           },
+          withCredentials: true,
         }
       );
 
       if (response.data.success) {
-        // Fetch the processed data - FIXED THIS LINE TO USE /api/get-data
-        const dataResponse = await axios.get(
-          "http://127.0.0.1:5000/api/get-data"
-        );
-
-        if (dataResponse.data.success) {
-          onDataProcessed(dataResponse.data.data);
+        // If we get the data directly in the upload response, use it
+        if (response.data.data) {
+          onDataProcessed(response.data.data);
         } else {
-          setError(dataResponse.data.error || "Failed to fetch processed data");
+          // Try the get-data endpoint as fallback
+          try {
+            const dataResponse = await axios.get(
+              "http://127.0.0.1:5000/api/get-data",
+              { withCredentials: true }
+            );
+
+            if (dataResponse.data.success) {
+              onDataProcessed(dataResponse.data.data);
+            } else {
+              setError(
+                dataResponse.data.error || "Failed to fetch processed data"
+              );
+            }
+          } catch (dataErr) {
+            console.error("Error fetching data:", dataErr);
+            setError("Failed to retrieve processed data");
+          }
         }
       } else {
         setError(response.data.error || "Failed to process PDF");
